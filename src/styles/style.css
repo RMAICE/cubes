@@ -1,0 +1,10 @@
+@import "global/variables";
+@import "global/typography";
+@import "global/global";
+@import "global/btns";
+@import "global/content";
+
+/* blocks */
+/* @import "blocks/"; */
+
+@import "global/animation";
