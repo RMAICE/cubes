@@ -1,89 +1,121 @@
-$(function() {
-	var container, stats;
+(function() {
+	//
+	var container;
 
+	// keys
 	var lock = true;
 
+	// global objects
 	var camera, scene, renderer;
-
 	var cube, plane;
 
+	var cubeTop = {
+		name: 'Top',
+		position: {
+			y: 0
+		}
+	}
+	var cubeMiddle = {
+		name: 'Middle',
+		position: {
+			y: 225
+		}
+	}
+	var cubeBotttom = {
+		name: 'Bottom',
+		position: {
+			y: 450
+		}
+	}
+
+	var cubesArr = [
+		cubeTop,
+		cubeMiddle,
+		cubeBotttom
+	];
+
+	// rotation
 	var targetRotation = 0;
 	var targetRotationOnMouseDown = 0;
 	var targetScale = 0; // нужен для анимации после touchend или mouseup
-
 	var mouseX = 0;
 	var mouseXOnMouseDown = 0;
-
 	var windowHalfX = window.innerWidth / 2;
 	var windowHalfY = window.innerHeight / 2;
 
+	// tween animation
 	var position;
 	var tween = new TWEEN.Tween();
 
-	init();
-	animate();
+	// calculates
 
+	Math.radians = function(degrees) {
+		return degrees * Math.PI / 180;
+	};
+
+	// init on dom ready
 	function init() {
 
-		container = document.createElement( 'div' );
-		document.body.appendChild( container );
+		container = document.querySelectorAll( 'main.main' )[0];
 
-		var info = document.createElement( 'div' );
-		info.style.position = 'absolute';
-		info.style.top = '10px';
-		info.style.width = '100%';
-		info.style.textAlign = 'center';
-		info.innerHTML = 'Drag to spin the cube';
-		container.appendChild( info );
-
+		// create camera
 		camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
-		camera.position.y = 150;
-		camera.position.z = 500;
+		camera.position.y = 250;
+		camera.position.z = 700;
 
+		// create scene
 		scene = new THREE.Scene();
 		scene.background = new THREE.Color( 0xf0f0f0 );
 
+		// create Cubes
 
-		// Cube
+		for ( var j = 0; j < cubesArr.length; j++) {
+			var item = cubesArr[j];
+			var geometry = new THREE.BoxGeometry( 200, 200, 200 );
 
-		var geometry = new THREE.BoxGeometry( 200, 200, 200 );
+			for ( var i = 0; i < geometry.faces.length; i += 2 ) {
 
-		for ( var i = 0; i < geometry.faces.length; i += 2 ) {
+				var hex = Math.random() * 0xffffff;
+				geometry.faces[ i ].color.setHex( hex );
+				geometry.faces[ i + 1 ].color.setHex( hex );
 
-			var hex = Math.random() * 0xffffff;
-			geometry.faces[ i ].color.setHex( hex );
-			geometry.faces[ i + 1 ].color.setHex( hex );
+			}
 
+			var material = new THREE.MeshBasicMaterial( { vertexColors: THREE.FaceColors, overdraw: 0.5 } );
+
+			cube = new THREE.Mesh( geometry, material );
+			cube.position.y = item.position.y;
+			cube.name = item.name;
+			scene.add( cube );
 		}
-
-		var material = new THREE.MeshBasicMaterial( { vertexColors: THREE.FaceColors, overdraw: 0.5 } );
-
-		cube = new THREE.Mesh( geometry, material );
-		cube.position.y = 150;
-		scene.add( cube );
 
 		// Plane
 
-		var geometry = new THREE.PlaneBufferGeometry( 200, 200 );
-		geometry.rotateX( - Math.PI / 2 );
+		// var geometry = new THREE.PlaneBufferGeometry( 200, 200 );
+		// geometry.rotateX( - Math.PI / 3 );
 
-		var material = new THREE.MeshBasicMaterial( { color: 0xe0e0e0, overdraw: 0.5 } );
+		// var material = new THREE.MeshBasicMaterial( { color: 0xe0e0e0, overdraw: 0.5 } );
 
-		plane = new THREE.Mesh( geometry, material );
-		scene.add( plane );
+		// plane = new THREE.Mesh( geometry, material );
+		// scene.add( plane );
 
+		// ray
+		raycaster = new THREE.Raycaster();
+		mouse = new THREE.Vector2();
+
+		// render
 		renderer = new THREE.WebGLRenderer();
 		renderer.setPixelRatio( window.devicePixelRatio );
-		renderer.setSize( window.innerWidth, window.innerHeight );
+		renderer.setSize( window.innerWidth - 2, window.innerHeight - 2 );
 		container.appendChild( renderer.domElement );
 
+		// events
 		document.addEventListener( 'mousedown', onDocumentMouseDown, false );
 		document.addEventListener( 'touchstart', onDocumentTouchStart, false );
-
-		//
-
 		window.addEventListener( 'resize', onWindowResize, false );
 
+		// calls
+		animate();
 	}
 
 	function onWindowResize() {
@@ -111,6 +143,20 @@ $(function() {
 		// какие то вычисления для положения курсора
 		mouseXOnMouseDown = event.clientX - windowHalfX;
 		targetRotationOnMouseDown = targetRotation;
+
+		mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+		mouse.y = ( event.clientY / window.innerHeight ) * 2 - 1;
+
+		raycaster.setFromCamera(mouse, camera);
+
+
+		var intersects = raycaster.intersectObjects( scene.children, true);
+
+		if (intersects.length > 0) {
+
+			console.log(intersects)
+
+		}
 
 	}
 
@@ -148,7 +194,7 @@ $(function() {
 		}
 
 		// применяем положение куба
-		plane.rotation.y = cube.rotation.y = targetRotation;
+		cube.rotation.y = targetRotation;
 	}
 
 	function onDocumentMouseUp( event ) {
@@ -230,7 +276,7 @@ $(function() {
 			}
 
 			// применяем положение куба
-			plane.rotation.y = cube.rotation.y = targetRotation;
+			cube.rotation.y = targetRotation;
 
 		}
 
@@ -246,8 +292,6 @@ $(function() {
 
 			// анимимруем до нужного положения
 			cubeAnim();
-
-
 		}
 	}
 
@@ -255,12 +299,12 @@ $(function() {
 		var position = {y: cube.rotation.y};
 		var tween = new TWEEN.Tween(position);
 
-		plane.rotation.y = cube.rotation.y = null;
+		cube.rotation.y = null;
 
 		tween.to({y: Math.PI/4*targetScale}, 250);
 		tween.start();
 		tween.onUpdate(function(object) {
-			plane.rotation.y = cube.rotation.y = position.y
+			cube.rotation.y = position.y
 		});
 		tween.onStart(function() {
 			document.removeEventListener( 'mousedown', onDocumentMouseDown, false );
@@ -268,7 +312,7 @@ $(function() {
 		});
 		tween.easing(TWEEN.Easing.Quartic.Out)
 		tween.onComplete(function() {
-			plane.rotation.y = cube.rotation.y = Math.PI/4*targetScale;
+			cube.rotation.y = Math.PI/4*targetScale;
 			targetRotation = cube.rotation.y;
 			document.addEventListener( 'mousedown', onDocumentMouseDown, false );
 			document.addEventListener( 'touchmove', onDocumentTouchMove, false );
@@ -290,4 +334,7 @@ $(function() {
 		renderer.render( scene, camera );
 
 	}
-});
+
+
+	init();
+})();
