@@ -4,61 +4,65 @@
 
 	var camera, scene, renderer;
 	var cube, plane;
-	var raycaster, mouse;
+
+	// size of each box
+	var height = 200;
+	var width = 550;
+	var length = 550;
 
 	var cubeBottom = {
-		name: 'Bottom',
+		lastRandom: [],
 		position: {
 			y: 0
 		},
-		side: {
-			left: new THREE.TextureLoader().load( '../img/c1.jpg' ),
-			right: new THREE.TextureLoader().load( '../img/c2.jpg' ),
-			top: 0xf0f0f0,
-			bottom: 0xf0f0f0,
-			front: new THREE.TextureLoader().load( '../img/c5.jpg' ),
-			back: new THREE.TextureLoader().load( '../img/c6.jpg' ),
-		},
+		textureArr: loadTextures( 'bottom' ),
+		side: function() {
+
+			setRandom( this.lastRandom );
+			console.log( this.lastRandom );
+			return getSideTextures( this );
+
+		}
 	}
 	var cubeMiddle = {
-		name: 'Middle',
+		lastRandom: [],
 		position: {
 			y: 225
 		},
-		side: {
-			left: new THREE.TextureLoader().load( '../img/b1.jpg' ),
-			right: new THREE.TextureLoader().load( '../img/b2.jpg' ),
-			top: 0xf0f0f0,
-			bottom: 0xf0f0f0,
-			front: new THREE.TextureLoader().load( '../img/b5.jpg' ),
-			back: new THREE.TextureLoader().load( '../img/b6.jpg' ),
-		},
+		textureArr: loadTextures( 'middle' ),
+		side: function() {
+
+			setRandom( this.lastRandom );
+			console.log( this.lastRandom );
+			return getSideTextures( this );
+
+		}
 	}
 	var cubeTop = {
-		name: 'Top',
+		lastRandom: [],
 		position: {
 			y: 450
 		},
-		side: {
-			left: new THREE.TextureLoader().load( '../img/a1.jpg' ),
-			right: new THREE.TextureLoader().load( '../img/a2.jpg' ),
-			top: 0xf0f0f0,
-			bottom: 0xf0f0f0,
-			front: new THREE.TextureLoader().load( '../img/a5.jpg' ),
-			back: new THREE.TextureLoader().load( '../img/a6.jpg' ),
-		},
+		textureArr: loadTextures( 'top' ),
+		side: function() {
+
+			setRandom( this.lastRandom );
+			console.log( this.lastRandom );
+			return getSideTextures( this );
+
+		}
 	}
 
 	var cubesArr = [
 		cubeTop,
-		cubeMiddle,
-		cubeBottom
+		cubeBottom,
+		cubeMiddle
 	];
 
 	// rotation
 	var targetRotation = 0;
 	var targetRotationOnMouseDown = 0;
-	var targetScale = 0; // нужен для анимации после touchend или mouseup
+	var targetScale = 0;
 	var mouseX = 0;
 	var mouseXOnMouseDown = 0;
 	var windowHalfX = window.innerWidth / 2;
@@ -68,15 +72,86 @@
 	var position;
 	var tween = new TWEEN.Tween();
 
-	// calculates
+	// ray
+	var raycaster = new THREE.Raycaster();
+	var mouse = new THREE.Vector2();
 
-	Math.radians = function(degrees) {
+	// calculates
+	Math.radians = function( degrees ) {
+
 		return degrees * Math.PI / 180;
+
 	};
+
+	function getRandomInt( min, max ) {
+
+		var random = Math.floor( Math.random() * ( max - min + 1 ) ) + min;
+
+		return random;
+
+	}
+
+	function setRandom( arr ) {
+
+		var random = getRandomInt( 0, 13 );
+		var lastRandom = arr.includes( random );
+
+		if ( lastRandom ) {
+
+			return setRandom( arr );
+
+		}
+
+		if ( arr.length < 4 && !lastRandom ) {
+
+			arr.push( random );
+			setRandom( arr );
+
+		}
+
+	}
+
+	//sets object sides images
+	function getSideTextures( obj ) {
+
+		var frontIndex = 0;
+		var rightIndex = 1;
+		var backIndex = 2;
+		var leftIndex = 3;
+
+		var sideObj = {
+			left: obj.textureArr[ obj.lastRandom[ leftIndex ] ],
+			right: obj.textureArr[ obj.lastRandom[ rightIndex ] ],
+			top: 0xdadada,
+			bottom: 0xdadada,
+			front: obj.textureArr[ obj.lastRandom[ frontIndex ] ],
+			back: obj.textureArr[ obj.lastRandom[ backIndex ] ],
+		};
+
+		return sideObj
+
+	}
+
+	//create texture arrays
+	function loadTextures( cubeType ) {
+
+		var t = 0;
+		var textureCount = 14;
+		var emptyArr = [];
+
+		for ( t = 0; t < textureCount; t++ ) {
+
+			var texture = new THREE.TextureLoader().load( '../img/' + cubeType + '-'+ (t + 1) + '.jpg' );
+
+			emptyArr.push( texture );
+
+		}
+
+		return emptyArr;
+	}
 
 	// init on dom ready
 	function init() {
-
 		container = document.querySelectorAll( 'main.main' )[0];
 
 		// create camera
@@ -88,36 +163,19 @@
 		scene = new THREE.Scene();
 		scene.background = new THREE.Color( 0xf0f0f0 );
 
-		var left = new THREE.TextureLoader().load( '../img/a1.jpg' );
-		var right = new THREE.TextureLoader().load( '../img/a2.jpg' );
-		var top = 0x465596;
-		var bottom = 0x465596;
-		var front = new THREE.TextureLoader().load( '../img/a5.jpg' );
-		var back = new THREE.TextureLoader().load( '../img/a6.jpg' );
-
 		// create Cubes
+		for ( var j = 0; j < cubesArr.length; j++ ) {
 
-		for ( var j = 0; j < cubesArr.length; j++) {
-			var item = cubesArr[j];
-			var geometry = new THREE.BoxGeometry( 700, 200, 700 );
-
-			for ( var i = 0; i < geometry.faces.length; i += 2 ) {
-
-				// var hex = Math.random() * 0xffffff;
-				geometry.faces[ i ].color.setHex( item.color );
-				geometry.faces[ i + 1 ].color.setHex( item.color );
-
-			}
-
+			var item = cubesArr[ j ];
+			var geometry = new THREE.BoxGeometry( width, height, length );
+			var itemSide = item.side();
 			var material = [
-
-				new THREE.MeshBasicMaterial( { map: item.side.left } ),
-				new THREE.MeshBasicMaterial( { map: item.side.right } ),
-				new THREE.MeshBasicMaterial( { color: item.side.top } ),
-				new THREE.MeshBasicMaterial( { color: item.side.bottom } ),
-				new THREE.MeshBasicMaterial( { map: item.side.front } ),
-				new THREE.MeshBasicMaterial( { map: item.side.back } )
-
+				new THREE.MeshBasicMaterial( { map: itemSide.left } ),
+				new THREE.MeshBasicMaterial( { map: itemSide.right } ),
+				new THREE.MeshBasicMaterial( { color: itemSide.top } ),
+				new THREE.MeshBasicMaterial( { color: itemSide.bottom } ),
+				new THREE.MeshBasicMaterial( { map: itemSide.front } ),
+				new THREE.MeshBasicMaterial( { map: itemSide.back } )
 			];
 
 			cube = new THREE.Mesh( geometry, material );
@@ -125,11 +183,8 @@
 			cube.position.z = -200;
 			cube.name = item.name;
 			scene.add( cube );
-		}
 
-		// ray
-		raycaster = new THREE.Raycaster();
-		mouse = new THREE.Vector2();
+		}
 
 		// render
 		renderer = new THREE.WebGLRenderer();
@@ -172,17 +227,17 @@
 		mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
 		mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
-		raycaster.setFromCamera(mouse, camera);
+		raycaster.setFromCamera( mouse, camera );
 
-		var intersects = raycaster.intersectObjects( scene.children, true);
+		var intersects = raycaster.intersectObjects( scene.children, true );
 
-		if (intersects.length > 0) {
+		if ( intersects.length > 0 ) {
 
-			cube = intersects[0].object;
+			cube = intersects[ 0 ].object;
 
 			targetRotationOnMouseDown = targetRotation = cube.rotation.y;
 
-			setRotationScale(targetRotation);
+			setRotationScale( targetRotation );
 
 			document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 			document.addEventListener( 'mouseup', onDocumentMouseUp, false );
@@ -197,23 +252,26 @@
 	}
 
 	var prevAngle = 0;
+
 	function onDocumentMouseMove( event ) {
+
 		var fixedAngle =  Math.PI/4*targetScale;
 
 		mouseX = event.clientX - windowHalfX;
 
 		// вычесляем куда куб должен повернутся
-		targetRotation = targetRotationOnMouseDown + ( mouseX - mouseXOnMouseDown ) / (360);
+		targetRotation = targetRotationOnMouseDown + ( mouseX - mouseXOnMouseDown ) / ( 360 );
 
-		setRotationScale(targetRotation);
+		setRotationScale( targetRotation );
 
-		if (fixedAngle !== prevAngle) {
-			console.log(prevAngle, fixedAngle);
+		if ( fixedAngle !== prevAngle ) {
+
+			console.log( prevAngle, fixedAngle );
+
 		}
 
 		// применяем положение куба
 		cube.rotation.y = targetRotation;
-
 
 		prevAngle = fixedAngle;
 
@@ -253,22 +311,22 @@
 			tween.stop();
 
 			// какие то вычисления для положения курсора
-			mouseXOnMouseDown = event.touches[0].pageX - windowHalfX;
+			mouseXOnMouseDown = event.touches[ 0 ].pageX - windowHalfX;
 
-			mouse.x = ( event.touches[0].pageX / window.innerWidth ) * 2 - 1;
-			mouse.y = - ( event.touches[0].pageY / window.innerHeight ) * 2 + 1;
+			mouse.x = ( event.touches[ 0 ].pageX / window.innerWidth ) * 2 - 1;
+			mouse.y = - ( event.touches[ 0 ].pageY / window.innerHeight ) * 2 + 1;
 
-			raycaster.setFromCamera(mouse, camera);
+			raycaster.setFromCamera( mouse, camera );
 
-			var intersects = raycaster.intersectObjects( scene.children, true);
+			var intersects = raycaster.intersectObjects( scene.children, true );
 
-			if (intersects.length > 0) {
+			if ( intersects.length > 0 ) {
 
-				cube = intersects[0].object;
+				cube = intersects[ 0 ].object;
 
 				targetRotationOnMouseDown = targetRotation = cube.rotation.y;
 
-				setRotationScale(targetRotation);
+				setRotationScale( targetRotation );
 
 				document.addEventListener( 'touchmove', onDocumentTouchMove, false );
 				document.addEventListener( 'touchend', onDocumentTouchEnd, false );
@@ -295,7 +353,7 @@
 			// вычесляем куда куб должен повернутся
 			targetRotation = targetRotationOnMouseDown + ( mouseX - mouseXOnMouseDown ) / 360;
 
-			setRotationScale(targetRotation);
+			setRotationScale( targetRotation );
 
 			// применяем положение куба
 			cube.rotation.y = targetRotation;
@@ -306,7 +364,7 @@
 
 	function onDocumentTouchEnd( event ) {
 
-		if (event.touches.length === 0) {
+		if ( event.touches.length === 0 ) {
 
 			document.removeEventListener( 'touchmove', onDocumentMouseMove, false );
 			document.removeEventListener( 'touchend', onDocumentTouchEnd, false );
@@ -314,53 +372,62 @@
 
 			// анимимруем до нужного положения
 			cubeAnim();
+
 		}
 
 	}
 
 	function cubeAnim() {
-		var position = {y: cube.rotation.y};
 
-		tween = new TWEEN.Tween(position);
+		var position = { y: cube.rotation.y };
+
+		tween = new TWEEN.Tween( position );
 		cube.rotation.y = null;
 
-		tween.to({y: Math.PI/4*targetScale}, 850);
+		tween.to( { y: Math.PI/4*targetScale }, 850 );
 		tween.start();
-		tween.onUpdate(function(object) {
+		tween.onUpdate( function( object ) {
+
 			cube.rotation.y = position.y
-		});
-		tween.easing(TWEEN.Easing.Quartic.Out)
-		tween.onComplete(function() {
+
+		} );
+		tween.easing( TWEEN.Easing.Quartic.Out )
+		tween.onComplete( function() {
+
 			cube.rotation.y = Math.PI/4*targetScale;
 			targetRotation = cube.rotation.y;
-		});
+
+		} );
+
 	}
 
-	function setRotationScale(targetRotation) {
-		if (targetRotation < 0) {
+	function setRotationScale( targetRotation ) {
 
-			targetScale = Math.ceil(targetRotation/0.78);
+		if ( targetRotation < 0 ) {
 
-		} else if (targetRotation >= 0) {
+			targetScale = Math.ceil( targetRotation/0.78 );
 
-			targetScale = Math.floor(targetRotation/0.78);
+		} else if ( targetRotation >= 0 ) {
+
+			targetScale = Math.floor( targetRotation/0.78 );
 
 		}
 
 		// делаем четным числом targetScale
-		if (targetScale % 2 != 0) {
+		if ( targetScale % 2 != 0 ) {
 
-			if (targetScale < 0) {
+			if ( targetScale < 0 ) {
 
 				targetScale--;
 
-			} else if (targetScale > 0) {
+			} else if ( targetScale > 0 ) {
 
 				targetScale++;
 
 			}
 
 		}
+
 	};
 
 	//
@@ -379,6 +446,6 @@
 
 	}
 
-
 	init();
+
 })();
